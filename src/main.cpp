@@ -12,11 +12,11 @@ extern "C" {
 #include "balance_control.h"
 
 // CONTROL VARIABLES
-#define REM_K1 0.62f
-#define REM_K2 0.095f
-#define REM_K3 0.0f
+#define REM_K1 0.70f
+#define REM_K2 0.045f
+#define REM_K3 0.005f
 #define REM_K4 0.0f
-#define U_MAX 2.5f
+#define U_MAX 3.0f
 
 #define BALANCE_PERIOD_US 5000UL // 5000 us = 0.005s. 1/0.005 = 200 HZ cycle time
 
@@ -87,10 +87,10 @@ void setup() {
     // PID tuning
     motor.voltage_sensor_align = 5.0f; // Set between 3.0f and 4.0f
     motor.voltage_limit = 5.0f;       
-    motor.velocity_limit = 25.0f;     
-    motor.PID_velocity.P = 0.04f;     
-    motor.PID_velocity.I = 1.5f;      
-    motor.PID_velocity.D = 0.0f;      
+    //motor.velocity_limit = 25.0f;     
+    //motor.PID_velocity.P = 0.04f;     
+    //motor.PID_velocity.I = 1.5f;      
+    //motor.PID_velocity.D = 0.0f;      
     // motor.LPF_velocity.Tf = 0.02f;    
     
     // Motor and FOC initialization
@@ -109,7 +109,7 @@ void setup() {
     pinMode(PA6, OUTPUT); // Direction
     
     digitalWrite(PA4, HIGH); // Enable motor
-    digitalWrite(PA5, 255); // Default not moving
+    analogWrite(PA5, 255); // Default not moving
     digitalWrite(PA6, LOW); // FORWARD to start
 
 
@@ -246,35 +246,33 @@ void loop()
             gyro_deg = balance->gyro_rate * 57.29578f;
 
             // Set vertical flag to false if bike fell
-            if (fabsf(angle_deg) > 20.0f)
-            {
+            if (fabsf(angle_deg) > 20.0f){
                 vertical = false;
             }
-
             // Renable if within 0.5 deg of upright again
-            else if (!vertical && (fabsf(angle_deg) < 0.5f))
-            {
+            else if (!vertical && (fabsf(angle_deg) < 0.5f)){
                 vertical = true;
             }
 
             // If upright
-            if (vertical)
-            {
+            if (vertical){
                 // CONTROL STUFF 
+                rem_wheel_vel = -motor.shaft_velocity;
+
                 angle_term = REM_K1 * angle_deg;
                 gyro_term = REM_K2 * gyro_deg;
-                u = angle_term + gyro_term;
+                wheel_term = REM_K3 * rem_wheel_vel;
+
+                u = angle_term + gyro_term + wheel_term;
                 u = constrain(u, -U_MAX, U_MAX);
             }
-            else
-            {
+            else{
                 u = 0.0f;
                 angle_raw = 0.0f;
                 angle_term = 0.0f;
                 gyro_term = 0.0f;
             }
         }
-
         // OTHERWISE IMU FAILED TO READ OVER I2C
         else
         {
@@ -301,15 +299,16 @@ void loop()
     motor.move(u);
 
     //print debugging stuff 
-    /*
-    if (HAL_GetTick() - last_angle_print_time >= 50)
+    
+    if (HAL_GetTick() - last_angle_print_time >= 200)
     {
         last_angle_print_time = HAL_GetTick();
         printf("Ang:%6.2f Gyro:%7.2f V:%7.2f U:%5.2f\r\n", angle_deg, gyro_deg, motor.shaft_velocity, u);
     }
-    */
+    
 
   // Servo and nrf inputs for steering and back wheel motor_______________________
+
   if (HAL_GetTick() - last_nrf_time >= 10) {
     last_nrf_time = HAL_GetTick();
     
@@ -320,7 +319,7 @@ void loop()
         nunchuck_y_val = Nunchuck_Data[1]; // 31 - 227
         nunchuck_c_val = Nunchuck_Data[2] & 0x01; // 1 pressed, 0 not pressed
         nunchuck_z_val = (Nunchuck_Data[2] >> 1) & 0x01; //1 pressed, 0 not pressed
-
+        /*
         printf("Nunchuck X Value: %u\r\n", Nunchuck_Data[0]);
         printf("Nunchuck Y Value: %u\r\n", Nunchuck_Data[1]);
         printf("C Val: %u\r\n", nunchuck_c_val);
@@ -328,7 +327,7 @@ void loop()
         printf("Target Wheel Speed: %d\r\n", target_speed);
         printf("Current Wheel Speed: %d\r\n", drive_speed);
         printf("Direction: %d\r\n", target_forward);
-
+        */
     }
     // Reset all values if not receiving anuything
     else{
@@ -353,7 +352,7 @@ void loop()
         servo_pulse_us = map(nunchuck_x_val, 125, 20, SERVO_CENTER, SERVO_MIN);
     }
 
-    printf("Current pulse width: %u us\r\n", servo_pulse_us);
+    //printf("Current pulse width: %u us\r\n", servo_pulse_us);
     TIM5->CCR1 = servo_pulse_us; // servo pulse width
 
     // Servo testing
