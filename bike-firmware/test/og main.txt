@@ -1,0 +1,268 @@
+#include <Arduino.h>
+#include <SimpleFOC.h>
+#include <math.h>
+
+extern "C" {
+#include "stm32f4xx_hal.h"
+}
+
+#include "icm20948.h"
+#include "stm32hal_init.h"
+#include "NRF24L01.h"
+
+ICM20948_Data g_imu; 
+
+HardwareSerial Serial2(PA3, PA2);
+
+// Explicitly bound the Arduino library to I2C1 pins only
+TwoWire myI2C1(PB7, PB6); 
+MagneticSensorI2C sensor = MagneticSensorI2C(AS5600_I2C);
+
+BLDCMotor motor = BLDCMotor(7);
+BLDCDriver3PWM driver = BLDCDriver3PWM(PA_8, PA_9, PA_10, PA_7);
+
+float max_velocity_target = 20.0; 
+float sweep_frequency = 1.5;      
+bool servo_state = false;
+uint8_t RxAddress[] = {0xEE, 0xDD, 0xCC, 0xBB, 0xAA}; //address for nrf24L01
+
+void setup() {
+
+  // Stm32 peripheral init
+  MX_GPIO_Init();
+  MX_TIM5_Init();
+  MX_I2C2_Init();
+  MX_USART2_UART_Init();
+  MX_SPI2_Init();
+  
+  // IMU init and calibration
+  ICM20948_Init();
+  ICM20948_Calibrate();
+  
+  // NRF 24L01 init and setup
+  NRF24_Init();
+  NRF24_RxMode(RxAddress, 10); // setting NRF24 to recieve with address and channel
+
+  // setting up motor encoder I2C line
+  myI2C1.begin();
+  myI2C1.setClock(400000); 
+  
+  sensor.init(&myI2C1); // Pass the isolated I2C1 reference to SimpleFOC
+  motor.linkSensor(&sensor);
+  
+  driver.voltage_power_supply = 12.0;
+  driver.pwm_frequency = 50000;
+  driver.init();
+  driver.enable();
+  motor.linkDriver(&driver);
+  
+  // Motor tuning
+  //motor.controller = MotionControlType::angle;
+  motor.controller = MotionControlType::torque;
+ 
+  motor.voltage_limit = 4.0f;       
+  motor.velocity_limit = 13.0f;     
+  motor.PID_velocity.P = 0.04f;     
+  motor.PID_velocity.I = 1.5f;      
+  motor.PID_velocity.D = 0.0f;      
+  motor.LPF_velocity.Tf = 0.02f;    
+
+  // Motor and FOC initialization
+  //motor.init();
+  //motor.initFOC();
+  //motor.enable();
+
+  // Timer for servo PWM
+  HAL_TIM_PWM_Start(&htim5, TIM_CHANNEL_1); // PWM for servo on tim5 CH 1
+
+  printf("Setup done!\r\n");
+  
+  //setup for back wheel motor
+  pinMode(PA5, OUTPUT); // PWM pin
+  pinMode(PA6, OUTPUT); // direction
+  digitalWrite(PA6, HIGH); // FORWARD
+
+  analogWriteFrequency(20000);  // set frequency first
+
+}
+
+uint32_t last_print_time = 0;
+uint32_t last_servo_time = 0;
+uint32_t last_nrf_time = 0;
+
+uint32_t nunchuck_val = 0; // placeholder for nunchuk joystick value
+uint16_t servo_pulse_us = 1500; // middle servo position
+
+uint8_t Nunchuck_Data[32]; //data to recieve into (0-x, 1-y, 2-z)
+uint8_t nunchuck_x_val = 0; // placeholder for nunchuk joystick x value
+uint8_t nunchuck_y_val = 0; // placeholder for nunchuk joystick y value
+uint8_t nunchuck_z_val = 0; // placeholder for nunchuk joystick z value
+uint8_t current_speed = 255;
+int16_t servo_position = 1500;
+uint8_t target_speed = 255;  // default stopped
+bool target_forward = true;
+
+float scaling_factor = 0;
+
+#define SPEED_LIMIT 3          // max change per 20ms tick
+#define MAX_SPEED 100          // 20% speed (255 - 51 = 204, inverted)
+
+
+void loop() {  
+
+  // motor stuff
+  //motor.loopFOC();
+  scaling_factor = 2*3.14;
+  ICM20948_Read(&g_imu); //read imu constantly
+  //motor.target = g_imu.accel_y * scaling_factor;  
+  //motor.move();
+
+  // reading imu for tests
+  if (HAL_GetTick() - last_print_time >= 500) {
+    last_print_time = HAL_GetTick();
+    //printf("Looping...\r\n");
+
+    //printf("Target_Vel:%f, ", motor.target);
+    //printf("Actual_Vel:%f\r\n", motor.shaft_velocity);
+    printf("Ax:%.2f Ay:%.2f Az:%.2f | Gx:%.2f Gy:%.2f Gz:%.2f\r\n",
+            g_imu.accel_x, g_imu.accel_y, g_imu.accel_z,
+            g_imu.gyro_x,  g_imu.gyro_y,  g_imu.gyro_z);
+
+  }
+
+  //servo and nrf inputs for steering
+  if (HAL_GetTick() - last_nrf_time >= 20) {
+    last_nrf_time = HAL_GetTick();
+    
+    if (isDataAvailable(1) == 1) {
+          NRF24_Receive(Nunchuck_Data); // receive data from nrf24L01
+          printf("Nunchuck X Value: %u\r\n", Nunchuck_Data[0]);
+          printf("Nunchuck Y Value: %u\r\n", Nunchuck_Data[1]);
+          //printf("Back Wheel Speed: %u\r\n", current_speed);
+          //printf("target Wheel      Speed: %u\r\n", current_speed);
+
+          printf("Direction: %d\r\n", target_forward);
+
+    }
+    nunchuck_x_val = Nunchuck_Data[0];
+    nunchuck_y_val = Nunchuck_Data[1];
+    //nunchuck_z_val = Nunchuck_Data[2];
+
+    target_speed = 255;
+    target_forward = true;
+    //BACK WHEEL MOTOR STUFF
+    if(nunchuck_y_val > 138) {
+    target_forward = true;
+    target_speed = map(nunchuck_y_val, 138, 255, 255, MAX_SPEED);
+} 
+    else if(nunchuck_y_val < 118) {
+        target_forward = false;
+        target_speed = map(nunchuck_y_val, 118, 0, 255, MAX_SPEED);
+    } 
+    else {
+        target_speed = 255;  // deadzone
+    }
+
+    // only switch direction when nearly stopped
+    if(current_speed >= 240) {  // close to stopped
+        digitalWrite(PA6, target_forward ? HIGH : LOW);
+    }
+
+    // ramp speed toward target
+    if(current_speed > target_speed){
+        current_speed -= SPEED_LIMIT;
+    }
+    else if(current_speed < target_speed){
+        current_speed += SPEED_LIMIT;
+    }
+    analogWrite(PA5, current_speed);
+
+    //SERVO STUFF
+    // deadzone so there isn't constant twitching around center position
+    if(abs((int)nunchuck_x_val - 128) < 10) {
+      nunchuck_x_val = 128;
+    }
+    servo_pulse_us = ((nunchuck_x_val * (2400 - 600)) / 255) + 600; // mapping nunchuck value to servo pulse width
+    //printf("Mapped Pulse Width: %u us\r\n", servo_pulse_us);
+    TIM5->CCR1 = servo_pulse_us; // servo pulse width
+
+    //(servo_state) ? TIM5->CCR1 = 600 : TIM5->CCR1 = 2400;
+    //servo_state = !servo_state;
+
+    if (target_forward == 1){
+      HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_SET); // toggle LED for forward
+    }
+    else {
+      HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_RESET); // toggle LED for reverse
+    }
+  }
+}
+
+
+
+
+
+/*
+
+void loop() {
+    if (HAL_GetTick() - last_nrf_time >= 20) {
+        last_nrf_time = HAL_GetTick();
+        
+        if (isDataAvailable(1) == 1) {
+            NRF24_Receive(Nunchuck_Data);
+        }
+        
+        nunchuck_y_val = Nunchuck_Data[1];
+        
+        printf("Y: %u\r\n", nunchuck_y_val);
+        
+        // direct mapping, no ramping
+            if(nunchuck_y_val > 138) {
+            digitalWrite(PA6, LOW);   // was HIGH, now LOW = actually forward
+            analogWrite(PA5, 180);
+            printf("FORWARD\r\n");
+        } else if(nunchuck_y_val < 118) {
+            digitalWrite(PA6, HIGH);  // was LOW, now HIGH = actually reverse
+            analogWrite(PA5, 180);
+            printf("REVERSE\r\n");
+        } else {
+            analogWrite(PA5, 255);
+            printf("STOP\r\n");
+}
+    }
+}
+    */
+
+
+
+
+
+
+
+
+
+
+
+/*
+MOTOR TESTING LOOP
+uint32_t last_print = 0;
+uint32_t test_start = 0;
+int phase = 0;
+void loop() {
+    motor.loopFOC();
+
+    // aggressive reversals every 500ms at full voltage
+    float t = millis() / 1000.0f;
+    motor.target = 4.0f * sin(2 * PI * 1.0 * t);  // 1Hz full voltage sine
+
+    motor.move();
+
+    if(millis() - last_print >= 500) {
+        last_print = millis();
+        printf("vel=%.1f target=%.1f\r\n",
+               motor.shaft_velocity, motor.target);
+    }
+}
+    */
+    //other test loop for back motor
+ 
