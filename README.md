@@ -8,13 +8,15 @@ Self balancing bike that uses a flywheel to auto balance. Project drive folder d
 
 [Project Drive Folder](https://drive.google.com/drive/folders/1dX5lAlIIB4DTDAcDznrTppuNJ5s5Nt8N?usp=sharing)
 
-# Quick demo video of bike balancing while stationary (sorry for the poor phone camera quality lol):
+# Quick demo video of bike balancing while stationary with back wheel motor disabled (sorry for the poor phone camera quality lol):
 
 https://github.com/user-attachments/assets/d5414e99-e70b-4be9-8098-3ad1ea3dc3ff
 
 # Mechanical Build
 <img width="663" height="468" alt="image" src="https://github.com/user-attachments/assets/5b239078-1093-499a-bc1b-c7a09a87676a" />
 
+# Current State of the bike
+Bike can balance without movement, but when driving forward/backward, vibrations occur which knocks off the loop (WIP) 
   
   PIN MAPPINGS:
 
