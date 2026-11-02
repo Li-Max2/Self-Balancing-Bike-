@@ -17,7 +17,23 @@ https://github.com/user-attachments/assets/d5414e99-e70b-4be9-8098-3ad1ea3dc3ff
 
 # Current State of the bike
 Bike can balance without movement, but when driving forward/backward, vibrations occur which knocks off the loop (WIP) 
-  
+
+# How the control loop works
+
+1. ICM-20948 accelerometer AND gyroscope combine to derive an angle measurement.
+- Atan2() converts the accelerometer y and z axis gravity readings into an angle away from the vertical axis
+- gyroscope measures angular velocity (dtheta/dt) (deg/s), and is converted into rad/s. From there, you can predict the angle changed over some dt:
+\[
+\Delta\theta=\omega\Delta t
+\]
+- everytime the gyro updates, you can calculate a new angle:
+\[
+\theta_{\text{predicted}}
+=\theta_{\text{previous}}+\omega\Delta t
+
+\]
+TO BE CONTINUED
+
   PIN MAPPINGS:
 
 Reaction wheel motor driver
