@@ -13,6 +13,9 @@ Self balancing bike that uses a flywheel to auto balance. Project drive folder d
 https://github.com/user-attachments/assets/d5414e99-e70b-4be9-8098-3ad1ea3dc3ff
 
 # Mechanical Build
+
+Very similar to RemRC's - shoutout to him for the mechanical build! I just have a different electrical system (different IMU, motor controller, driver, control system, etc.), motor, motor mount, and flywheel. BUT everything else is the same as his build mechanically
+
 <img width="663" height="468" alt="image" src="https://github.com/user-attachments/assets/5b239078-1093-499a-bc1b-c7a09a87676a" />
 
 # Current State of the bike
