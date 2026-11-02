@@ -18,7 +18,7 @@ void ICM20948_Init(void)
     // Whoami address is the test read register - should return 0xEA for ICM20948
     while(attempts < 10)
     {
-        HAL_I2C_Mem_Read(&hi2c2, ICM20948_ADDR, ICM20948_WHO_AM_I, I2C_MEMADD_SIZE_8BIT, &whoami, 1, 50);
+        HAL_I2C_Mem_Read(&hi2c1, ICM20948_ADDR, ICM20948_WHO_AM_I, I2C_MEMADD_SIZE_8BIT, &whoami, 1, 50);
         printf("Attempt %d WHO_AM_I: 0x%02X\r\n", attempts, whoami);
         
         if(whoami == ICM20948_WHO_AM_I_EXPECTED) {
@@ -41,7 +41,7 @@ void ICM20948_Init(void)
     ICM20948_WriteReg(0, ICM20948_PWR_MGMT_2, 0x00); // all sensors on
 
     // Configure gyro - Bank 2
-    ICM20948_WriteReg(2, ICM20948_GYRO_CONFIG_1, 0b00111011); // +- 500dps, DLPF on setting 7 - 3DB BW 361.4 HZ (max reading)
+    ICM20948_WriteReg(2, ICM20948_GYRO_CONFIG_1, 0b00100011); // +- 500dps, DLPF on setting 7 - 3DB BW 361.4 HZ (max reading)
     ICM20948_WriteReg(2, ICM20948_GYRO_SMPLRT_DIV, 0x00); // Max rate
 
     // Configure accel - Bank 2
@@ -59,14 +59,14 @@ void ICM20948_Select_Bank(uint8_t bank)
 {
     // Left shift by 4 because in REG_BANK_SEL register, bank num selection uses bits [5:4]
 	uint8_t val = (bank << 4);
-	HAL_I2C_Mem_Write(&hi2c2, ICM20948_ADDR, ICM20948_BANK_SEL, I2C_MEMADD_SIZE_8BIT, &val, 1, 100);
+	HAL_I2C_Mem_Write(&hi2c1, ICM20948_ADDR, ICM20948_BANK_SEL, I2C_MEMADD_SIZE_8BIT, &val, 1, 100);
 }
 
 // Helper function for writing to a register
 void ICM20948_WriteReg(uint8_t bank, uint8_t reg, uint8_t val)
 {
     ICM20948_Select_Bank(bank);
-    HAL_I2C_Mem_Write(&hi2c2, ICM20948_ADDR, reg, I2C_MEMADD_SIZE_8BIT, &val, 1, 100);
+    HAL_I2C_Mem_Write(&hi2c1, ICM20948_ADDR, reg, I2C_MEMADD_SIZE_8BIT, &val, 1, 100);
 }
 
 // Helper function for reading from a register
@@ -74,7 +74,7 @@ uint8_t ICM20948_ReadReg(uint8_t bank, uint8_t reg)
 {
     uint8_t val = 0;
     ICM20948_Select_Bank(bank);
-    HAL_I2C_Mem_Read(&hi2c2, ICM20948_ADDR, reg, I2C_MEMADD_SIZE_8BIT, &val, 1, 100);
+    HAL_I2C_Mem_Read(&hi2c1, ICM20948_ADDR, reg, I2C_MEMADD_SIZE_8BIT, &val, 1, 100);
     return val;
 }
 
@@ -87,11 +87,11 @@ int ICM20948_Read(ICM20948_Data *data)
 
     // ONE I2c burst read for all 12 bytes, automatically goes to next register after each read, storing in buf
     uint8_t buf[12];
-    HAL_StatusTypeDef status = HAL_I2C_Mem_Read(&hi2c2, ICM20948_ADDR, ICM20948_ACCEL_XOUT_H, I2C_MEMADD_SIZE_8BIT, buf, 12, 5); //all in one fucntion because it pulse reads from one register to the next
+    HAL_StatusTypeDef status = HAL_I2C_Mem_Read(&hi2c1, ICM20948_ADDR, ICM20948_ACCEL_XOUT_H, I2C_MEMADD_SIZE_8BIT, buf, 12, 5); //all in one fucntion because it pulse reads from one register to the next
     
     if(status != HAL_OK)
     {
-        printf("I2C FAIL status:%d error:0x%08lX state:0x%02X\r\n", status, HAL_I2C_GetError(&hi2c2), HAL_I2C_GetState(&hi2c2));
+        printf("I2C FAIL status:%d error:0x%08lX state:0x%02X\r\n", status, HAL_I2C_GetError(&hi2c1), HAL_I2C_GetState(&hi2c1));
         return 0;
     }
 
@@ -104,7 +104,7 @@ int ICM20948_Read(ICM20948_Data *data)
     int16_t gz = (int16_t)(buf[10] << 8 | buf[11]);
 
     // converting to real units 
-    // +- 16g range → sensitivity = 16384 LSB/g (divide by 16384 to get 2g range for 16 signed bit read)
+    // // +-2g range -> sensitivity = 16384 LSB/g (divide by 16384 to get 2g range for 16 signed bit read)
     // REMOVED OFFSET FOR ACCEL OF RNOW
     //data->accel_x = ax / 16384.0f - g_ax_offset;
     //data->accel_y = ay / 16384.0f - g_ay_offset;

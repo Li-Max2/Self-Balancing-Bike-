@@ -1,6 +1,9 @@
 #include <Arduino.h>
 #include <SimpleFOC.h>
 #include <math.h>
+#include <SimpleFOCDrivers.h>
+#include <SPI.h>
+#include "encoders/as5048a/MagneticSensorAS5048A.h"
 
 extern "C" {
 #include "stm32f4xx_hal.h"
@@ -10,25 +13,28 @@ extern "C" {
 #include "stm32hal_init.h"
 #include "NRF24L01.h"
 #include "balance_control.h"
+#define ENC_CS PB10
+
 
 // CONTROL VARIABLES
-#define REM_K1 0.70f
-#define REM_K2 0.045f
-#define REM_K3 0.005f
-#define REM_K4 0.0f
-#define U_MAX 3.0f
+#define REM_K1 4.9f
+#define REM_K2 0.9f
+#define REM_K3 0.000f
+#define U_MAX 6.0f
+
+#define REM_K4 0.000f
 
 #define BALANCE_PERIOD_US 5000UL // 5000 us = 0.005s. 1/0.005 = 200 HZ cycle time
+#define CONTROL_PERIOD_US 10000UL
 
 // SETUP VARIABLES 
 // Arduino pins for motor driver and ecoder (everything else is handled by STM HAL)
-TwoWire myI2C1(PB7, PB6); //sda, scl 
-MagneticSensorI2C sensor = MagneticSensorI2C(AS5600_I2C);
-BLDCMotor motor = BLDCMotor(7);
-BLDCDriver3PWM driver = BLDCDriver3PWM(PA_10, PA_9, PA_8, PA_7);
+BLDCMotor motor = BLDCMotor(11);
+BLDCDriver3PWM driver(PA8, PA9, PA10, PA7);
+MagneticSensorAS5048A sensor(ENC_CS);
 
 // Recieve address for nrf24L01
-uint8_t RxAddress[] = {0xEE, 0xDD, 0xCC, 0xBB, 0xAA}; 
+uint8_t RxAddress[] = {0xEE, 0xDD, 0xCC, 0xBB, 0xAA};
 
 // Holds all IMU data (accel xyz, gyro xyz)
 ICM20948_Data g_imu;
@@ -43,6 +49,9 @@ uint32_t last_angle_print_time = 0;
 
 // Running IMU/filter at 200 Hz
 
+void calibrateBike();
+void CheckEmergencyStop();
+
 // SETUP
 void setup() {
     // Wait for peripherals to stabilize
@@ -51,28 +60,32 @@ void setup() {
     // Stm32 peripheral init
     MX_GPIO_Init();
     MX_TIM5_Init();
-    MX_I2C2_Init();
+    MX_I2C1_Init();
     MX_USART2_UART_Init();
     MX_SPI2_Init();
     
     // IMU init and calibration
     ICM20948_Init();
-    ICM20948_Calibrate();
+    //ICM20948_Calibrate();
     
     // NRF24L01 init and setup
     NRF24_Init();
     NRF24_RxMode(RxAddress, 10); // setting NRF24 to recieve with address and channel 10
 
-    // Setting up motor encoder I2C line
-    myI2C1.begin();
-    myI2C1.setClock(400000); 
-    
-    sensor.init(&myI2C1); // Passing i2c line to simple FOC
+
+    // SPI STEUP
+    SPI.setSCLK(PB3);
+    SPI.setMISO(PB4);
+    SPI.setMOSI(PB5);
+    SPI.begin();
+
+    sensor.init(&SPI);
+
     motor.linkSensor(&sensor);
     
     // SIMPLE FOC motor driver setup
     driver.voltage_power_supply = 12.0;
-    driver.pwm_frequency = 50000;
+    driver.pwm_frequency = 25000;
     driver.init();
     driver.enable();
     motor.linkDriver(&driver);
@@ -85,14 +98,14 @@ void setup() {
 
 
     // PID tuning
-    motor.voltage_sensor_align = 5.0f; // Set between 3.0f and 4.0f
-    motor.voltage_limit = 5.0f;       
+    motor.voltage_sensor_align = 7.0f; 
+    motor.voltage_limit = 7.0f;       
     //motor.velocity_limit = 25.0f;     
     //motor.PID_velocity.P = 0.04f;     
     //motor.PID_velocity.I = 1.5f;      
     //motor.PID_velocity.D = 0.0f;      
     // motor.LPF_velocity.Tf = 0.02f;    
-    
+
     // Motor and FOC initialization
     motor.init();
     motor.initFOC();
@@ -112,51 +125,20 @@ void setup() {
     analogWrite(PA5, 255); // Default not moving
     digitalWrite(PA6, LOW); // FORWARD to start
 
-
-    
-    // Balance calibration for accelerometer data
     printf("Setup done!\r\n");
-    printf("Balance time! Lock in gang\r\n");
-    HAL_Delay(500);
-    printf("Hold bike at balance point...\r\n");
-    HAL_Delay(500);
-    printf("3\r\n");
-    HAL_Delay(500);
-    printf("2\r\n");
-    HAL_Delay(500);
-    printf("1\r\n");
-    HAL_Delay(500);
-    
+
+    motor.disable();
 
     // Accelerometer calibration for balance point accross 200 samples
-    float sum_ay = 0.0f;
-    float sum_az = 0.0f;
-    int valid_samples = 0;
-    for(int i = 0; i < 200; i++)
-    {
-        if(ICM20948_Read(&g_imu))
-        {
-            sum_ay += g_imu.accel_y;
-            sum_az += g_imu.accel_z;
-            valid_samples++;
-        }
-        HAL_Delay(5);
-    }
-
-    if(valid_samples > 0)
-    {
-        // average accel_y and accel_z values to pass into BALANCE_INIT
-        float average_ay = sum_ay / valid_samples;
-        float average_az = sum_az / valid_samples;
-
-        Balance_Init(average_ay, average_az);
-    }
+    calibrateBike();
 
     // Getting pointer for balance state struct into main
     balance = Balance_GetState();
+
+    motor.enable();
+
     printf("Balance zero calibrated\r\n");
-  
-  last_balance_time = micros();
+    last_balance_time = micros();
 }
 
 // ALL VARIABLES FOR MAIN CONTROL LOOP
@@ -211,7 +193,7 @@ float gyro_deg = 0.0f;
 float angle_abs = 0.0f;
 
 float m_speed = 0.0f; // not in use currently 
-float rem_wheel_vel = -motor.shaft_velocity;
+float rem_wheel_vel = motor.shaft_velocity;
 
 // Control equation parameters ____________________
 float angle_term = REM_K1 * angle_deg;
@@ -220,12 +202,17 @@ float wheel_term = REM_K3 * rem_wheel_vel;
 float accum_term = REM_K4 * m_speed;
 float angle_raw = 0.0f;
 
+bool emergency_stop = false;
+uint8_t uart_rx_char = 0;
+
+
 // MAIN CONTROL LOOP
 void loop()
 {
+    CheckEmergencyStop();
     motor.loopFOC();
     now_us = micros();
-
+    
     // BALANCE CONTROL LOOP
     if ((uint32_t)(now_us - last_balance_time) >= BALANCE_PERIOD_US)
     {
@@ -254,23 +241,28 @@ void loop()
                 vertical = true;
             }
 
-            // If upright
-            if (vertical){
-                // CONTROL STUFF 
-                rem_wheel_vel = -motor.shaft_velocity;
+            if ((uint32_t)(now_us - last_control_time) >= CONTROL_PERIOD_US)
+            {
+                last_control_time = now_us;
 
-                angle_term = REM_K1 * angle_deg;
-                gyro_term = REM_K2 * gyro_deg;
-                wheel_term = REM_K3 * rem_wheel_vel;
+                // If upright
+                if (vertical){
+                    // CONTROL STUFF 
+                    rem_wheel_vel = motor.shaft_velocity;
 
-                u = angle_term + gyro_term + wheel_term;
-                u = constrain(u, -U_MAX, U_MAX);
-            }
-            else{
-                u = 0.0f;
-                angle_raw = 0.0f;
-                angle_term = 0.0f;
-                gyro_term = 0.0f;
+                    angle_term = REM_K1 * angle_deg;
+                    gyro_term = REM_K2 * gyro_deg;
+                    wheel_term = REM_K3 * rem_wheel_vel;
+
+                    u = angle_term + gyro_term + wheel_term;
+                    u = constrain(u, -U_MAX, U_MAX);
+                }
+                else{
+                    u = 0.0f;
+                    angle_raw = 0.0f;
+                    angle_term = 0.0f;
+                    gyro_term = 0.0f;
+                }
             }
         }
         // OTHERWISE IMU FAILED TO READ OVER I2C
@@ -286,9 +278,9 @@ void loop()
             if (imu_fail_count >= 20)
             {
                 // RESET i2c if imu keeps failing
-                HAL_I2C_DeInit(&hi2c2);
+                HAL_I2C_DeInit(&hi2c1);
                 HAL_Delay(2);
-                MX_I2C2_Init();
+                MX_I2C1_Init();
 
                 imu_fail_count = 0;
             }
@@ -296,19 +288,28 @@ void loop()
     }
 
     // FINALLY send updated motor torque command
-    motor.move(u);
-
+    // keep as -u 
+    if (!emergency_stop)
+    {
+        motor.move(-u);
+    }
+    else
+    {
+        u = 0.0f;
+    }
+    //motor.move(0.0f);
+    
     //print debugging stuff 
     
     if (HAL_GetTick() - last_angle_print_time >= 200)
     {
         last_angle_print_time = HAL_GetTick();
-        printf("Ang:%6.2f Gyro:%7.2f V:%7.2f U:%5.2f\r\n", angle_deg, gyro_deg, motor.shaft_velocity, u);
+        printf("Ang:%5.2f Gy:%6.2f Vel:%7.2f U:%5.2f Uq:%5.2f\r\n", angle_deg,gyro_deg, motor.shaft_velocity, u, motor.voltage.q);
     }
     
 
   // Servo and nrf inputs for steering and back wheel motor_______________________
-
+    
   if (HAL_GetTick() - last_nrf_time >= 10) {
     last_nrf_time = HAL_GetTick();
     
@@ -319,7 +320,7 @@ void loop()
         nunchuck_y_val = Nunchuck_Data[1]; // 31 - 227
         nunchuck_c_val = Nunchuck_Data[2] & 0x01; // 1 pressed, 0 not pressed
         nunchuck_z_val = (Nunchuck_Data[2] >> 1) & 0x01; //1 pressed, 0 not pressed
-        /*
+        
         printf("Nunchuck X Value: %u\r\n", Nunchuck_Data[0]);
         printf("Nunchuck Y Value: %u\r\n", Nunchuck_Data[1]);
         printf("C Val: %u\r\n", nunchuck_c_val);
@@ -327,7 +328,7 @@ void loop()
         printf("Target Wheel Speed: %d\r\n", target_speed);
         printf("Current Wheel Speed: %d\r\n", drive_speed);
         printf("Direction: %d\r\n", target_forward);
-        */
+        
     }
     // Reset all values if not receiving anuything
     else{
@@ -421,6 +422,7 @@ void loop()
     pwm_send = 255 - abs(drive_speed);
     analogWrite(PA5, constrain(pwm_send, 100, 255));
   }
+
 }
 
 
@@ -459,34 +461,97 @@ void loop() {
 
 
 
+void calibrateBike()
+{
+    printf("Hold bike at BALANCE POINT! Lock in!\r\n");
+    HAL_Delay(500);
 
+    printf("3\r\n");
+    HAL_Delay(500);
+    printf("2\r\n");
 
+    HAL_Delay(500);
+    printf("1\r\n");
+    HAL_Delay(500);
+    printf("CALIBRATING - KEEP STILL\r\n");
 
+    g_gx_offset = 0.0f;
+    g_gy_offset = 0.0f;
+    g_gz_offset = 0.0f;
 
+    float sum_gx = 0.0f;
+    float sum_gy = 0.0f;
+    float sum_gz = 0.0f;
+    float sum_ay = 0.0f;
+    float sum_az = 0.0f;
 
+    int valid_samples = 0;
+    const int samples = 500;
 
+    // Sampling 500 gyro and accelerometer offsets 
+    for (int i = 0; i < samples; i++)
+    {
+        ICM20948_Data sample;
+        if (ICM20948_Read(&sample))
+        {
+            sum_gx += sample.gyro_x;
+            sum_gy += sample.gyro_y;
+            sum_gz += sample.gyro_z;
 
+            sum_ay += sample.accel_y;
+            sum_az += sample.accel_z;
 
-/*
-MOTOR TESTING LOOP
-uint32_t last_print = 0;
-uint32_t test_start = 0;
-int phase = 0;
-void loop() {
-    motor.loopFOC();
+            valid_samples++;
+        }
+        HAL_Delay(4);
+    }
 
-    // aggressive reversals every 500ms at full voltage
-    float t = millis() / 1000.0f;
-    motor.target = 4.0f * sin(2 * PI * 1.0 * t);  // 1Hz full voltage sine
+    if (valid_samples == 0)
+    {
+        printf("CALIBRATION FAILED\r\n");
+        return;
+    }
 
-    motor.move();
+    // Averaging the offset
+    g_gx_offset = sum_gx / valid_samples;
+    g_gy_offset = sum_gy / valid_samples;
+    g_gz_offset = sum_gz / valid_samples;
 
-    if(millis() - last_print >= 500) {
-        last_print = millis();
-        printf("vel=%.1f target=%.1f\r\n",
-               motor.shaft_velocity, motor.target);
+    float avg_ay = sum_ay / valid_samples;
+    float avg_az = sum_az / valid_samples;
+
+    Balance_Init(avg_ay, avg_az);
+    printf("Calibration done!!\r\n");
+}
+
+void CheckEmergencyStop()
+{
+    // Non-blocking check for one received UART character
+    if (HAL_UART_Receive(&huart2, &uart_rx_char, 1, 0) == HAL_OK)
+    {
+        // x to diable motor
+        if (uart_rx_char == 'x' || uart_rx_char == 'X')
+        {
+            emergency_stop = true;
+
+            u = 0.0f;
+            motor.move(0.0f);
+            motor.disable();
+
+            printf("\r\nEMERGENCY STOP - MOTOR DISABLED\r\n");
+            printf("R to re-enable\r\n");
+        }
+
+        // r to renable motor
+        else if (uart_rx_char == 'r' || uart_rx_char == 'R')
+        {
+            if (emergency_stop)
+            {
+                u = 0.0f;
+                motor.enable();
+                emergency_stop = false;
+                printf("\r\nMotor re-enabled\r\n");
+            }
+        }
     }
 }
-    */
-    //other test loop for back motor
- 

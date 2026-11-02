@@ -10,7 +10,7 @@ extern "C" {
 #include <stdio.h>
 
 //type defs
-extern I2C_HandleTypeDef hi2c2;
+extern I2C_HandleTypeDef hi2c1;
 extern SPI_HandleTypeDef hspi2;
 extern TIM_HandleTypeDef htim5;
 extern UART_HandleTypeDef huart2;
@@ -20,7 +20,7 @@ extern UART_HandleTypeDef huart2;
 #define LED_GPIO_Port GPIOC
 #define SPI2_CSN_Pin GPIO_PIN_12
 #define SPI2_CSN_GPIO_Port GPIOB
-#define SPI2_CE_Pin GPIO_PIN_4
+#define SPI2_CE_Pin GPIO_PIN_0
 #define SPI2_CE_GPIO_Port GPIOB
 
 // Private function prototypes (function declarations)
@@ -29,7 +29,7 @@ void MX_GPIO_Init();
 void MX_USART2_UART_Init();
 void MX_SPI2_Init();
 void MX_TIM5_Init();
-void MX_I2C2_Init();
+void MX_I2C1_Init();
 #ifdef __cplusplus
 }
 #endif

@@ -19,7 +19,7 @@ extern "C" {
 
 // Pin defs
 #define NRF24_CE_PORT GPIOB
-#define NRF24_CE_PIN GPIO_PIN_4
+#define NRF24_CE_PIN GPIO_PIN_0
 #define NRF24_CSN_PORT GPIOB
 #define NRF24_CSN_PIN GPIO_PIN_12
 

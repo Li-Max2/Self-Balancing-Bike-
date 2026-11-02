@@ -34,6 +34,11 @@ typedef struct {
     float gyro_x, gyro_y, gyro_z;
 } ICM20948_Data;
 
+// extern so can see in main
+extern float g_gx_offset;
+extern float g_gy_offset;
+extern float g_gz_offset;
+
 // function declarations
 void ICM20948_Select_Bank(uint8_t bank);
 void ICM20948_WriteReg(uint8_t bank, uint8_t reg, uint8_t val);
