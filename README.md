@@ -24,11 +24,12 @@ Bike can balance without movement, but when driving forward/backward, vibrations
 - Atan2() converts the accelerometer y and z axis gravity readings into an angle away from the vertical axis
 - gyroscope measures angular velocity (dtheta/dt) (deg/s), and is converted into rad/s. From there, you can predict the angle changed over some dt:
 
-$ \Delta\theta=\omega\Delta t$ 
+$\Delta\theta=\omega\Delta t$ 
 
 - everytime the gyro updates, you can calculate a new angle:
 
 $\theta_{\text{predicted}} =\theta_{\text{previous}}+\omega\Delta t$
+
 TO BE CONTINUED
 
   PIN MAPPINGS:
