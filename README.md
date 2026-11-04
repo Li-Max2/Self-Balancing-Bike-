@@ -9,19 +9,41 @@ Self balancing bike that uses a flywheel to auto balance. Project drive folder d
 [Project Drive Folder](https://drive.google.com/drive/folders/1dX5lAlIIB4DTDAcDznrTppuNJ5s5Nt8N?usp=sharing)
 
 
-# Mechanical Build
+## Mechanical Build
 
 Very similar to RemRC's - shoutout to him for the mechanical build! I just have a different electrical system (different IMU, motor controller, driver, control system, etc.), motor, motor mount, and flywheel. BUT everything else is pretty similar to his build mechanically. I am also using SimpleFOC to run my bldc motor instead of using a Nidec
 
 <img width="663" height="468" alt="image" src="https://github.com/user-attachments/assets/5b239078-1093-499a-bc1b-c7a09a87676a" />
 
-# Quick demo video of bike balancing while stationary:
+## First video of bike actually balancing!
 https://github.com/user-attachments/assets/1babaf89-0a4d-4dfa-8808-23e55a363219
 
+Definitely need to clean up wiring AND figure out how to balance with the back motor on in the future though.
 
-
-# Current State of the bike
+## Current State of the bike
 Bike can balance without movement, but when driving forward/backward, vibrations occur which knocks off the loop (WIP) 
+
+## Electrical Build
+- **Microcontroller:** STM32F411 Blackpill
+- **IMU:** ICM-20948 (accelerometer + gyroscope)
+- **Reaction Wheel Motor:** GM3506 BLDC motor
+- **Encoder:** AS5048A magnetic encoder
+- **Motor Driver:** DRV8313
+- **Rear Wheel Motor:** Nidec 24H
+- **Steering Servo:** MG995
+- **Wireless Communication:** NRF24L01 transceiver
+- **Remote Controller:** Wii Nunchuck
+- **Power Supply:** 3S 11.1V LiPo battery (for now just using external PSU with battery disattached)
+
+## Mechanical Build
+- **Chassis:** Custom 3D-printed PLA frame (~35 cm long)
+- **Reaction Wheel:** 3D-printed PLA flywheel (120 mm diameter)
+- **Flywheel Weights:** 12 M4 screws (16 mm), each with 3 nuts (36 total)
+- **Front Wheel:** LEGO parts 2902 and 2903
+- **Rear Wheel:** LEGO tire 88516
+- **Drive System:** 280 mm timing belt
+- **Steering:** MG995 servo-actuated front fork
+- **Assembly:** M2, M2.5, M3, and M4 nuts/bolts
 
 # How the control loop works
 
