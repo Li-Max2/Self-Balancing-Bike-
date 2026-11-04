@@ -8,9 +8,9 @@ Self balancing bike that uses a flywheel to auto balance. Project drive folder d
 
 [Project Drive Folder](https://drive.google.com/drive/folders/1dX5lAlIIB4DTDAcDznrTppuNJ5s5Nt8N?usp=sharing)
 
-# Quick demo video of bike balancing while stationary with back wheel motor disabled (sorry for the poor phone camera quality lol):
+# Quick demo video of bike balancing while stationary + test setup:
+https://github.com/user-attachments/assets/15128b72-456f-4fb8-9d4f-a4549a400022
 
-https://github.com/user-attachments/assets/d5414e99-e70b-4be9-8098-3ad1ea3dc3ff
 
 # Mechanical Build
 
