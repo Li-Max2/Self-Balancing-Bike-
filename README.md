@@ -8,15 +8,17 @@ Self balancing bike that uses a flywheel to auto balance. Project drive folder d
 
 [Project Drive Folder](https://drive.google.com/drive/folders/1dX5lAlIIB4DTDAcDznrTppuNJ5s5Nt8N?usp=sharing)
 
-# Quick demo video of bike balancing while stationary + test setup:
-https://github.com/user-attachments/assets/15128b72-456f-4fb8-9d4f-a4549a400022
-
 
 # Mechanical Build
 
 Very similar to RemRC's - shoutout to him for the mechanical build! I just have a different electrical system (different IMU, motor controller, driver, control system, etc.), motor, motor mount, and flywheel. BUT everything else is pretty similar to his build mechanically. I am also using SimpleFOC to run my bldc motor instead of using a Nidec
 
 <img width="663" height="468" alt="image" src="https://github.com/user-attachments/assets/5b239078-1093-499a-bc1b-c7a09a87676a" />
+
+# Quick demo video of bike balancing while stationary:
+https://github.com/user-attachments/assets/1babaf89-0a4d-4dfa-8808-23e55a363219
+
+
 
 # Current State of the bike
 Bike can balance without movement, but when driving forward/backward, vibrations occur which knocks off the loop (WIP) 
