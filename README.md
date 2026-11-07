@@ -35,7 +35,9 @@ Very similar to RemRC's - shoutout to him for the mechanical build! I just have 
 <img width="663" height="468" alt="image" src="https://github.com/user-attachments/assets/5b239078-1093-499a-bc1b-c7a09a87676a" />
 
 ## First video of bike actually balancing!
+
 https://github.com/user-attachments/assets/1babaf89-0a4d-4dfa-8808-23e55a363219
+
 Definitely need to clean up wiring AND figure out how to balance with the back motor on in the future though.
 
 ## Current State of the bike
