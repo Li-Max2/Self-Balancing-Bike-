@@ -1,7 +1,3 @@
-
-https://github.com/user-attachments/assets/3e05bd81-1092-4b02-91d9-a487e8285292
-
-
 # Self-Balancing-Bike-
 
 Self balancing bike that uses a flywheel to auto balance. Project drive folder down below (has materials, diagrams, etc.):
