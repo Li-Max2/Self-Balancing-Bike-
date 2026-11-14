@@ -35,16 +35,18 @@ https://github.com/user-attachments/assets/564dc976-a3f2-43d4-baaa-4a28df0c77de
 - **Rear Wheel:** LEGO tire 88516
 - **Drive System:** 280 mm timing belt
 - **Steering:** MG995 servo-actuated front fork
-- **Assembly:** M2, M2.5, M3, and M4 nuts/bolta
+- **Assembly:** M2, M2.5, M3, and M4 nuts/bolts
 
 Very similar to RemRC's - shoutout to him for the mechanical build! I just have a different electrical system (different IMU, motor controller, driver, control system, etc.), motor, motor mount, and flywheel. BUT everything else is pretty similar to his build mechanically. I am also using SimpleFOC to run my bldc motor instead of using a Nidec
+
+Also thank you to the Watertown Hatch Makerspace for the free parts used in this project
 
 <img width="663" height="468" alt="image" src="https://github.com/user-attachments/assets/5b239078-1093-499a-bc1b-c7a09a87676a" />
 
 [Project Drive Folder](https://drive.google.com/drive/folders/1dX5lAlIIB4DTDAcDznrTppuNJ5s5Nt8N?usp=sharing)
 
 ## Current State of the bike
-Bike can balance without movement, but when driving forward/backward, vibrations occur which knocks off the loop (WIP) 
+Bike can balance without movement, but can't consistently balance while driving for >10 seconds
 
 ## How the control loop works
 
