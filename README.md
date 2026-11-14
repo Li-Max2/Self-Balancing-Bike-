@@ -5,7 +5,7 @@ Self balancing bike that uses a flywheel to auto balance. Project drive folder d
 *Seperate folders for bike firmware and external wii-nunchuk controller firmware*
 
 ## Electrical Build
-- **Microcontroller:** STM32F411 Blackpill
+- **Microcontroller:** STM32F411
 - **IMU:** ICM-20948 (accelerometer + gyroscope)
 - **Reaction Wheel Motor:** GM3506 BLDC motor
 - **Encoder:** AS5048A magnetic encoder
