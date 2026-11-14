@@ -18,7 +18,7 @@ extern "C" {
 
 // CONTROL VARIABLES// 50.3, 0.023 //0.045
 #define REM_K1 4.3f
-#define REM_K2 0.50f
+#define REM_K2 0.51f
 #define REM_K3 0.01f
 #define U_MAX 8.0f
 
