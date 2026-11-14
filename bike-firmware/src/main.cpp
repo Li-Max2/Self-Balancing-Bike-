@@ -16,11 +16,11 @@ extern "C" {
 #define ENC_CS PB10
 
 
-// CONTROL VARIABLES
-#define REM_K1 4.9f
-#define REM_K2 0.9f
-#define REM_K3 0.000f
-#define U_MAX 6.0f
+// CONTROL VARIABLES// 50.3, 0.023 //0.045
+#define REM_K1 4.3f
+#define REM_K2 0.50f
+#define REM_K3 0.01f
+#define U_MAX 8.0f
 
 #define REM_K4 0.000f
 
@@ -71,7 +71,12 @@ void setup() {
     // NRF24L01 init and setup
     NRF24_Init();
     NRF24_RxMode(RxAddress, 10); // setting NRF24 to recieve with address and channel 10
-
+    printf("NRF CONFIG: 0x%02X\r\n", NRF24_Read_Reg(CONFIG));
+    printf("RF CH:      0x%02X\r\n", NRF24_Read_Reg(RF_CH));
+    printf("RF SETUP:   0x%02X\r\n", NRF24_Read_Reg(RF_SETUP));
+    printf("EN RXADDR:  0x%02X\r\n", NRF24_Read_Reg(EN_RXADDR));
+    printf("RX PW P1:   %u\r\n", NRF24_Read_Reg(RX_PW_P1));
+    printf("STATUS:     0x%02X\r\n", NRF24_Read_Reg(STATUS));
 
     // SPI STEUP
     SPI.setSCLK(PB3);
@@ -99,7 +104,7 @@ void setup() {
 
     // PID tuning
     motor.voltage_sensor_align = 7.0f; 
-    motor.voltage_limit = 7.0f;       
+    motor.voltage_limit = 8.0f;       
     //motor.velocity_limit = 25.0f;     
     //motor.PID_velocity.P = 0.04f;     
     //motor.PID_velocity.I = 1.5f;      
@@ -139,6 +144,27 @@ void setup() {
 
     printf("Balance zero calibrated\r\n");
     last_balance_time = micros();
+    analogWrite(PA5, 255);
+    delay(200);
+
+    // Test one direction
+    digitalWrite(PA6, HIGH);
+    delay(20);
+    analogWrite(PA5, 200);
+    delay(500);
+
+    // Stop
+    analogWrite(PA5, 255);
+    delay(200);
+
+    // Test opposite direction
+    digitalWrite(PA6, LOW);
+    delay(20);
+    analogWrite(PA5, 200);
+    delay(500);
+
+    // Stop
+    analogWrite(PA5, 255);
 }
 
 // ALL VARIABLES FOR MAIN CONTROL LOOP
@@ -160,8 +186,8 @@ uint8_t nunchuck_z_val = 0; // nunchuk joystick z value
 
 // SERVO STUFF FOR STEERING _____________________
 #define SERVO_CENTER 1500 // Center pulse position for servo
-#define SERVO_MIN 600 //
-#define SERVO_MAX 2400
+#define SERVO_MIN 800 //
+#define SERVO_MAX 2200
 uint16_t servo_pulse_us = SERVO_CENTER; // middle servo position
 
 // Back wheel speed variables ___________________________________
@@ -208,8 +234,20 @@ uint8_t uart_rx_char = 0;
 
 // MAIN CONTROL LOOP
 void loop()
-{
-    CheckEmergencyStop();
+{   
+    static uint32_t last_time = 0;
+    static uint32_t last_print = 0;
+
+    uint32_t now = micros();
+    uint32_t loop_time = now - last_time;
+    last_time = now;
+
+    if (millis() - last_print >= 1000) {
+        last_print = millis();
+        //printf("Loop time: %lu us\r\n", (unsigned long)loop_time);
+        //printf("IMU interval: %.0f us\r\n", dt * 1000000.0f);
+    }
+    //CheckEmergencyStop();
     motor.loopFOC();
     now_us = micros();
     
@@ -226,7 +264,7 @@ void loop()
             imu_fail_count = 0; // Reset IMU fail count
 
             // Updating the balance struct to get angle and bike fall speed
-            Balance_Update(g_imu.accel_y, g_imu.accel_z, g_imu.gyro_x, dt);
+            Balance_Update(g_imu.accel_x, g_imu.accel_z, g_imu.gyro_y, dt);
 
             // Current angle and gyro vals in deg/s (filter is in radians 1 rad = ~57 deg)
             angle_deg = balance->bike_angle * 57.29578f;
@@ -291,7 +329,8 @@ void loop()
     // keep as -u 
     if (!emergency_stop)
     {
-        motor.move(-u);
+        motor.move(0);
+        //motor.move(0.0f);
     }
     else
     {
@@ -304,12 +343,22 @@ void loop()
     if (HAL_GetTick() - last_angle_print_time >= 200)
     {
         last_angle_print_time = HAL_GetTick();
-        printf("Ang:%5.2f Gy:%6.2f Vel:%7.2f U:%5.2f Uq:%5.2f\r\n", angle_deg,gyro_deg, motor.shaft_velocity, u, motor.voltage.q);
+        /*
+        printf("AX:%.2f AY:%.2f AZ:%.2f | GX:%.2f GY:%.2f GZ:%.2f\r\n",
+    g_imu.accel_x,
+    g_imu.accel_y,
+    g_imu.accel_z,
+    g_imu.gyro_x,
+    g_imu.gyro_y,
+    g_imu.gyro_z);
+
+    */
+        //printf("Ang:%5.2f Gy:%6.2f Vel:%7.2f U:%5.2f Uq:%5.2f\r\n", angle_deg,gyro_deg, motor.shaft_velocity, u, motor.voltage.q);
     }
     
 
   // Servo and nrf inputs for steering and back wheel motor_______________________
-    
+
   if (HAL_GetTick() - last_nrf_time >= 10) {
     last_nrf_time = HAL_GetTick();
     
@@ -321,6 +370,9 @@ void loop()
         nunchuck_c_val = Nunchuck_Data[2] & 0x01; // 1 pressed, 0 not pressed
         nunchuck_z_val = (Nunchuck_Data[2] >> 1) & 0x01; //1 pressed, 0 not pressed
         
+        /*
+        
+        
         printf("Nunchuck X Value: %u\r\n", Nunchuck_Data[0]);
         printf("Nunchuck Y Value: %u\r\n", Nunchuck_Data[1]);
         printf("C Val: %u\r\n", nunchuck_c_val);
@@ -328,48 +380,46 @@ void loop()
         printf("Target Wheel Speed: %d\r\n", target_speed);
         printf("Current Wheel Speed: %d\r\n", drive_speed);
         printf("Direction: %d\r\n", target_forward);
+        */
         
     }
-    // Reset all values if not receiving anuything
     else{
-        nunchuck_y_val = 128;
-        nunchuck_x_val = 128;
-        target_speed = 0;
+
     }
 
     // SERVO STUFF __________________________________________________________
     // deadzone so there isn't constant twitching around center position
-    if(abs((int)nunchuck_x_val - 125) < 10) {
-      nunchuck_x_val = 125;
+    if(abs((int)nunchuck_x_val - 128) < 3) {
+      nunchuck_x_val = 128;
       servo_pulse_us = SERVO_CENTER;
     }
 
     // Left
     else if (nunchuck_x_val > 125){
-        servo_pulse_us = map(nunchuck_x_val, 125, 220, SERVO_CENTER, SERVO_MAX);
+        servo_pulse_us = map(nunchuck_x_val, 128, 255, SERVO_CENTER, SERVO_MAX);
     }
     // Right
     else{
-        servo_pulse_us = map(nunchuck_x_val, 125, 20, SERVO_CENTER, SERVO_MIN);
+        servo_pulse_us = map(nunchuck_x_val, 128, 0, SERVO_CENTER, SERVO_MIN);
     }
 
     //printf("Current pulse width: %u us\r\n", servo_pulse_us);
     TIM5->CCR1 = servo_pulse_us; // servo pulse width
-
+    //printf("X:%u Servo:%u\r\n",nunchuck_x_val, servo_pulse_us);
     // Servo testing
     //(servo_state) ? TIM5->CCR1 = 600 : TIM5->CCR1 = 2400;
     //servo_state = !servo_state;
     
     // BACK WHEEL MOTOR STUFF ____________________________________________________
     // Forward
-    if(nunchuck_y_val > 142) {
+    if(nunchuck_y_val > 133) {
         raw_speed = map(nunchuck_y_val, 142, 227, 255, MAX_SPEED);
         target_speed = 255 - raw_speed;
 
         ramp_speed = ACTIVE_RAMP;
     } 
     // Backwards
-    else if(nunchuck_y_val < 118) {
+    else if(nunchuck_y_val < 123) {
         raw_speed = map(nunchuck_y_val, 118, 31, 255, MAX_SPEED);
         target_speed = -255 + raw_speed;
 
@@ -418,9 +468,16 @@ void loop()
         target_forward = false;
     }
 
+    
     // Reverse cmd since 255 = stopped, 0 = fullspeed on motor
     pwm_send = 255 - abs(drive_speed);
     analogWrite(PA5, constrain(pwm_send, 100, 255));
+
+    printf("Y:%u Target:%d Drive:%d DIR:%d\r\n",
+       nunchuck_y_val,
+       target_speed,
+       drive_speed,
+       digitalRead(PA6));
   }
 
 }
@@ -482,11 +539,12 @@ void calibrateBike()
     float sum_gx = 0.0f;
     float sum_gy = 0.0f;
     float sum_gz = 0.0f;
+    float sum_ax = 0.0f;
     float sum_ay = 0.0f;
     float sum_az = 0.0f;
 
     int valid_samples = 0;
-    const int samples = 500;
+    const int samples = 700;
 
     // Sampling 500 gyro and accelerometer offsets 
     for (int i = 0; i < samples; i++)
@@ -498,6 +556,7 @@ void calibrateBike()
             sum_gy += sample.gyro_y;
             sum_gz += sample.gyro_z;
 
+            sum_ax += sample.accel_x;
             sum_ay += sample.accel_y;
             sum_az += sample.accel_z;
 
@@ -517,10 +576,11 @@ void calibrateBike()
     g_gy_offset = sum_gy / valid_samples;
     g_gz_offset = sum_gz / valid_samples;
 
+    float avg_ax = sum_ax / valid_samples;
     float avg_ay = sum_ay / valid_samples;
     float avg_az = sum_az / valid_samples;
 
-    Balance_Init(avg_ay, avg_az);
+    Balance_Init(avg_ax, avg_az);
     printf("Calibration done!!\r\n");
 }
 

@@ -204,7 +204,6 @@ void NRF24_Receive(uint8_t *data){
 
 	// unselecting device
 	CS_UnSelect();
-	HAL_Delay(1);
 
 	//flushing fifo
 	current_cmd = FLUSH_RX;
