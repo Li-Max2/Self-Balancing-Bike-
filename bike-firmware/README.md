@@ -1,16 +1,4 @@
-# Self-Balancing-Bike-
 
-Self balancing bike that uses a flywheel to auto balance. Project drive folder down below (has materials, diagrams, etc.):
-
-*Seperate folders for bike firmware and external wii-nunchuk controller firmware*
-
-[Project Drive Folder](https://drive.google.com/drive/folders/1dX5lAlIIB4DTDAcDznrTppuNJ5s5Nt8N?usp=sharing)
-
-# Quick demo video of bike balancing while stationary:
-
-https://github.com/user-attachments/assets/d5414e99-e70b-4be9-8098-3ad1ea3dc3ff
-
-  
   PIN MAPPINGS:
 
 Reaction wheel motor driver
