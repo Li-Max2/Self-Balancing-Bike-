@@ -1,12 +1,12 @@
 
+https://github.com/user-attachments/assets/3e05bd81-1092-4b02-91d9-a487e8285292
+
 
 # Self-Balancing-Bike-
 
 Self balancing bike that uses a flywheel to auto balance. Project drive folder down below (has materials, diagrams, etc.):
 
 *Seperate folders for bike firmware and external wii-nunchuk controller firmware*
-
-[Project Drive Folder](https://drive.google.com/drive/folders/1dX5lAlIIB4DTDAcDznrTppuNJ5s5Nt8N?usp=sharing)
 
 ## Electrical Build
 - **Microcontroller:** STM32F411 Blackpill
@@ -19,11 +19,17 @@ Self balancing bike that uses a flywheel to auto balance. Project drive folder d
 - **Wireless Communication:** NRF24L01 transceiver
 - **Remote Controller:** Wii Nunchuck
 - **Power Supply:** 3S 11.1V LiPo battery (for now just using external PSU with battery disattached)
+
+
 ## Updated balance video - got it to balance with the motor and battery attatched!
 
-## First video of bike actually balancing!
 (sorry for the bad video quality my phone camera is terrible)
+
 https://github.com/user-attachments/assets/883d2daf-59d8-4193-acc7-02b97293eb2b
+
+## Quick explanation of how the bike works
+https://github.com/user-attachments/assets/564dc976-a3f2-43d4-baaa-4a28df0c77de
+
 
 ## Mechanical Build
 - **Chassis:** Custom 3D-printed PLA frame (~35 cm long)
@@ -39,8 +45,7 @@ Very similar to RemRC's - shoutout to him for the mechanical build! I just have 
 
 <img width="663" height="468" alt="image" src="https://github.com/user-attachments/assets/5b239078-1093-499a-bc1b-c7a09a87676a" />
 
-
-Definitely need to clean up wiring AND figure out how to balance with the back motor on in the future though.
+[Project Drive Folder](https://drive.google.com/drive/folders/1dX5lAlIIB4DTDAcDznrTppuNJ5s5Nt8N?usp=sharing)
 
 ## Current State of the bike
 Bike can balance without movement, but when driving forward/backward, vibrations occur which knocks off the loop (WIP) 
@@ -106,3 +111,5 @@ Status LED
 
 First ever balance!
 https://github.com/user-attachments/assets/1babaf89-0a4d-4dfa-8808-23e55a363219
+## First video of bike actually balancing!
+
