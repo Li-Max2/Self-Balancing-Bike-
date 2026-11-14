@@ -14,7 +14,7 @@ Self balancing bike that uses a flywheel to auto balance. Project drive folder d
 - **Steering Servo:** MG995
 - **Wireless Communication:** NRF24L01 transceiver
 - **Remote Controller:** Wii Nunchuck
-- **Power Supply:** 3S 11.1V LiPo battery (for now just using external PSU with battery disattached)
+- **Power Supply:** 3S 11.1V LiPo battery
 
 
 ## Updated balance video - got it to balance with the back motor and battery attatched!
