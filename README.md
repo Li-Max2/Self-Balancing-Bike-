@@ -19,6 +19,11 @@ Self balancing bike that uses a flywheel to auto balance. Project drive folder d
 - **Wireless Communication:** NRF24L01 transceiver
 - **Remote Controller:** Wii Nunchuck
 - **Power Supply:** 3S 11.1V LiPo battery (for now just using external PSU with battery disattached)
+## Updated balance video - got it to balance with the motor and battery attatched!
+
+## First video of bike actually balancing!
+(sorry for the bad video quality my phone camera is terrible)
+https://github.com/user-attachments/assets/883d2daf-59d8-4193-acc7-02b97293eb2b
 
 ## Mechanical Build
 - **Chassis:** Custom 3D-printed PLA frame (~35 cm long)
@@ -34,9 +39,6 @@ Very similar to RemRC's - shoutout to him for the mechanical build! I just have 
 
 <img width="663" height="468" alt="image" src="https://github.com/user-attachments/assets/5b239078-1093-499a-bc1b-c7a09a87676a" />
 
-## First video of bike actually balancing!
-
-https://github.com/user-attachments/assets/1babaf89-0a4d-4dfa-8808-23e55a363219
 
 Definitely need to clean up wiring AND figure out how to balance with the back motor on in the future though.
 
@@ -56,6 +58,7 @@ $\Delta\theta=\omega\Delta t$
 $\theta_{\text{predicted}} =\theta_{\text{previous}}+\omega\Delta t$
 
 TO BE CONTINUED
+
 
   PIN MAPPINGS:
 
@@ -100,3 +103,6 @@ USART PRINT DEBUGGING
 
 Status LED
 - PC13 -> LED
+
+First ever balance!
+https://github.com/user-attachments/assets/1babaf89-0a4d-4dfa-8808-23e55a363219
