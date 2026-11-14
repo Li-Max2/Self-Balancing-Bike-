@@ -17,7 +17,7 @@ Self balancing bike that uses a flywheel to auto balance. Project drive folder d
 - **Power Supply:** 3S 11.1V LiPo battery (for now just using external PSU with battery disattached)
 
 
-## Updated balance video - got it to balance with the motor and battery attatched!
+## Updated balance video - got it to balance with the back motor and battery attatched!
 
 (sorry for the bad video quality my phone camera is terrible)
 
